@@ -1,0 +1,11 @@
+Python ≥ 3.11
+transformers
+gradio
+pandas
+numpy 
+matplotlib 
+seaborn
+scikit-learn
+torch
+torchvision
+torchaudio
