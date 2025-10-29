@@ -3,9 +3,22 @@ import numpy as np
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import TextLoader
-from langchain_mistralai import MistralAIEmbeddings
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_chroma import Chroma
+import os
+
+# Prefer Mistral if the API key is available; otherwise fall back to a local HF embedding
+MISTRAL_KEY = os.getenv("MISTRALAI_API_KEY")
+if MISTRAL_KEY:
+    try:
+        from langchain_mistralai import MistralAIEmbeddings
+        embedding = MistralAIEmbeddings(model="mistral-embed")
+    except Exception:
+        # If Mistral import fails despite key being present, clear key so fallback runs below
+        embedding = None
+        MISTRAL_KEY = None
+else:
+    embedding = None
 
 import gradio as gr
 
@@ -29,7 +42,36 @@ books["large_thumbnail"] = np.where(
 raw_doc = TextLoader("data/tagged_description.txt",encoding='utf-8').load()
 text_splitter = CharacterTextSplitter(chunk_size=0, chunk_overlap=0, separator="\n")
 documents = text_splitter.split_documents(raw_doc)
-embedding=MistralAIEmbeddings(model="mistral-embed")
+if embedding is None:
+    # Try langchain's HuggingFaceEmbeddings first (uses sentence-transformers models)
+    try:
+        from langchain.embeddings import HuggingFaceEmbeddings
+        embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        print("Using local HuggingFaceEmbeddings (sentence-transformers/all-MiniLM-L6-v2)")
+    except Exception:
+        # Final fallback: use sentence-transformers directly and wrap it to match the expected API
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            class LocalEmbedding:
+                def __init__(self, model_name="all-MiniLM-L6-v2"):
+                    # model name in HF hub for sentence-transformers mappings
+                    self.model = SentenceTransformer(model_name)
+
+                def embed_documents(self, texts: list[str]) -> list[list[float]]:
+                    # returns list of vectors
+                    return [list(map(float, vec)) for vec in self.model.encode(texts, show_progress_bar=True)]
+
+                def embed_query(self, text: str) -> list[float]:
+                    return list(map(float, self.model.encode([text])[0]))
+
+            embedding = LocalEmbedding("all-MiniLM-L6-v2")
+            print("Using sentence-transformers LocalEmbedding (all-MiniLM-L6-v2)")
+        except Exception:
+            raise RuntimeError(
+                "No embedding backend available. Either set MISTRALAI_API_KEY or install 'sentence-transformers' (pip install sentence-transformers)"
+            )
+
 db_books = Chroma.from_documents(documents, embedding=embedding)
 
 def retrieve_semantic_recom(

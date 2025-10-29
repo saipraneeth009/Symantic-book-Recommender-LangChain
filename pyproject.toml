@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "symantic-book-recommender-langchain"
+version = "0.1.0"
+description = "Semantic book recommender using LangChain-style components"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Your Name", email = "you@example.com" },
+]
+
+# Core runtime dependencies (mirrors requirements.txt)
+dependencies = [
+  "transformers",
+  "gradio",
+  "pandas",
+  "numpy",
+  "matplotlib",
+  "seaborn",
+  "scikit-learn",
+  "torch",
+  "torchvision",
+  "torchaudio",
+]
+
+[project.optional-dependencies]
+dev = [
+  "black",
+  "ruff",
+  "pytest",
+]
