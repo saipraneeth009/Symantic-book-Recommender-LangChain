@@ -1,5 +1,6 @@
 # Python ≥ 3.11
 transformers
+sentence-transformers
 gradio
 pandas
 numpy 
